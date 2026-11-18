@@ -1,0 +1,24 @@
+version: 2
+
+models:
+  - name: fct_breaks
+    description: Quiebres con su resultado clasificado y su celda en la grilla de velocidad × ángulo.
+    columns:
+      - name: break_id
+        data_tests: [unique, not_null]
+      - name: outcome
+        description: Qué pasa después del quiebre según las reglas de bola 9.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['falta', 'gana con la 9', 'sigue jugando', 'no emboca']
+
+  - name: agg_break_grid
+    description: Tasas de éxito, falta y bola 9 por celda de velocidad × ángulo.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [experiment, v0_bin, cut_bin]
+    columns:
+      - name: success_rate
+        description: Proporción de quiebres que emboca al menos una bola sin falta.

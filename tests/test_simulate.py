@@ -1,4 +1,5 @@
 import pyarrow.parquet as pq
+import pytest
 
 from pool_break_lab.run_batch import run, sample_params
 from pool_break_lab.simulate import BreakParams, simulate_break
@@ -31,3 +32,9 @@ def test_run_is_resumable(tmp_path):
 
     assert pq.read_table(exp_dir / "part-00000.parquet").equals(first)
     assert pq.read_table(exp_dir / "part-00001.parquet").num_rows == 2
+
+
+def test_run_rejects_different_config_for_same_experiment(tmp_path):
+    run("test", n=2, base_seed=0, chunk_size=2, workers=1, out=tmp_path)
+    with pytest.raises(SystemExit):
+        run("test", n=2, base_seed=99, chunk_size=2, workers=1, out=tmp_path)

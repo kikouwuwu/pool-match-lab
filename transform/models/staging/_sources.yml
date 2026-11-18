@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: raw
+    description: Quiebres simulados por `pool-break`, en Parquet particionado por experimento.
+    meta:
+      external_location: "read_parquet('{{ env_var('POOL_RAW_DIR', 'data/raw') }}/experiment=*/part-*.parquet', hive_partitioning = true)"
+    tables:
+      - name: breaks

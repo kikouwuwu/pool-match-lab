@@ -45,16 +45,27 @@ def run(experiment: str, n: int, base_seed: int, chunk_size: int, workers: int, 
     params = sample_params(n, base_seed)
     chunks = [params[i : i + chunk_size] for i in range(0, n, chunk_size)]
 
-    manifest = {
+    config = {
         "experiment": experiment,
         "n": n,
         "base_seed": base_seed,
         "chunk_size": chunk_size,
-        "ranges": {"v0": V0_RANGE, "cut": CUT_RANGE, "spin": SPIN_RANGE},
+        "ranges": {"v0": list(V0_RANGE), "cut": list(CUT_RANGE), "spin": list(SPIN_RANGE)},
         "pooltool_version": version("pooltool-billiards"),
-        "created_at": datetime.now(UTC).isoformat(),
     }
-    (exp_dir / "manifest.json").write_text(json.dumps(manifest, indent=2))
+    manifest_path = exp_dir / "manifest.json"
+    if manifest_path.exists():
+        # Al reanudar, la configuración debe ser la misma para no mezclar datos de corridas distintas
+        previous = json.loads(manifest_path.read_text())
+        previous.pop("created_at", None)
+        if previous != config:
+            raise SystemExit(
+                f"El experimento '{experiment}' ya existe con otra configuración. "
+                "Usa otro nombre de experimento."
+            )
+    else:
+        manifest = {**config, "created_at": datetime.now(UTC).isoformat()}
+        manifest_path.write_text(json.dumps(manifest, indent=2))
 
     with Pool(workers) as pool:
         for idx, chunk in enumerate(chunks):

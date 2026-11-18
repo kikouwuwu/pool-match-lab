@@ -1,0 +1,21 @@
+version: 2
+
+models:
+  - name: stg_breaks
+    description: Un quiebre simulado por fila, con nombres de columnas normalizados.
+    columns:
+      - name: break_id
+        description: Experimento + semilla. Identifica un quiebre de forma única y reproducible.
+        data_tests: [unique, not_null]
+      - name: v0
+        description: Velocidad inicial de la blanca (m/s).
+        data_tests: [not_null]
+      - name: cut
+        description: Desvío respecto del centro de la bola 1 (grados).
+        data_tests: [not_null]
+      - name: n_pocketed
+        description: Bolas de color embocadas en el quiebre (sin contar la blanca).
+        data_tests: [not_null]
+      - name: scratch
+        description: Si la blanca terminó embocada.
+        data_tests: [not_null]
