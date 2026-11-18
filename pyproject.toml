@@ -1,0 +1,27 @@
+[project]
+name = "pool-break-lab"
+version = "0.1.0"
+description = "Pipeline de datos sobre millones de quiebres de pool simulados"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pooltool-billiards==0.6.0",
+    "numpy",
+    "pyarrow",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]
+
+[project.scripts]
+pool-break = "pool_break_lab.run_batch:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
