@@ -1,0 +1,13 @@
+# Experimentos de simulación. Cada uno es una partición del asset raw/breaks en Dagster:
+# agregar uno aquí lo deja disponible para materializar o incluir en un backfill.
+# Las semillas base no se traslapan, así que cada quiebre es único entre experimentos.
+
+piloto:
+  description: Muestra chica para validar el pipeline de punta a punta
+  n: 2000
+  seed: 0
+
+barrido_100k:
+  description: Barrido aleatorio de velocidad, ángulo y efecto
+  n: 100000
+  seed: 1000000

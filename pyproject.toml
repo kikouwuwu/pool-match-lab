@@ -9,10 +9,15 @@ dependencies = [
     "numpy",
     "pyarrow",
     "dbt-duckdb==1.11.1",
+    "dagster==1.13.30",
+    "dagster-dbt==0.29.30",
+    "pyyaml",
+    # dbt exige protobuf<7; sin este límite pip instala la 7 y dbt falla
+    "protobuf<7",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "ruff"]
+dev = ["pytest", "ruff", "dagster-webserver==1.13.30"]
 
 [project.scripts]
 pool-break = "pool_break_lab.run_batch:main"

@@ -4,7 +4,7 @@ DBT_ARGS = --project-dir transform --profiles-dir transform
 EXPERIMENT ?= piloto
 N ?= 2000
 
-.PHONY: install simulate transform lint test check
+.PHONY: install simulate transform orchestrate lint test check
 
 install:
 	pip install -e ".[dev]"
@@ -14,6 +14,9 @@ simulate:
 
 transform:
 	$(DBT) build $(DBT_ARGS)
+
+orchestrate:
+	dagster dev -m pool_break_lab.defs
 
 lint:
 	ruff check .
