@@ -1,13 +1,14 @@
 [project]
-name = "pool-break-lab"
+name = "pool-match-lab"
 version = "0.1.0"
-description = "Pipeline de datos sobre millones de quiebres de pool simulados"
+description = "Analista de partidas de pool: del video grabado a estadísticas de cada tiro"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "pooltool-billiards==0.6.0",
     "numpy",
     "pyarrow",
+    "opencv-python-headless==5.1.0.95",
     "dbt-duckdb==1.11.1",
     "dagster==1.13.30",
     "dagster-dbt==0.29.30",
@@ -20,7 +21,9 @@ dependencies = [
 dev = ["pytest", "ruff", "dagster-webserver==1.13.30"]
 
 [project.scripts]
-pool-break = "pool_break_lab.run_batch:main"
+pool-break = "pool_match_lab.run_batch:main"
+pool-synthetic = "pool_match_lab.synthetic:main"
+pool-analyze = "pool_match_lab.shots:main"
 
 [build-system]
 requires = ["hatchling"]

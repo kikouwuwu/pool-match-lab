@@ -1,4 +1,4 @@
-# pool-break-lab
+# pool-match-lab
 
 Pipeline de datos que simula millones de quiebres de pool (bola 9) con física
 realista para responder una pregunta simple: **¿cuál es el mejor quiebre?**

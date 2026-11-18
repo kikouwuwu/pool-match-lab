@@ -1,8 +1,8 @@
 import pyarrow.parquet as pq
 import pytest
 
-from pool_break_lab.run_batch import run, sample_params
-from pool_break_lab.simulate import BreakParams, simulate_break
+from pool_match_lab.run_batch import run, sample_params
+from pool_match_lab.simulate import BreakParams, simulate_break
 
 
 def test_same_seed_gives_same_break():

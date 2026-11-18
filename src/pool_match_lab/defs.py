@@ -12,7 +12,7 @@ import dagster as dg
 import yaml
 from dagster_dbt import DagsterDbtTranslator, DbtCliResource, DbtProject, dbt_assets
 
-from pool_break_lab.run_batch import run
+from pool_match_lab.run_batch import run
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "data"

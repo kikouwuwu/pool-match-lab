@@ -2,7 +2,7 @@ from itertools import pairwise
 
 import dagster as dg
 
-from pool_break_lab.defs import EXPERIMENTS, defs
+from pool_match_lab.defs import EXPERIMENTS, defs
 
 
 def test_definitions_load():

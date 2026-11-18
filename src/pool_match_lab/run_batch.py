@@ -16,7 +16,7 @@ from pathlib import Path
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from pool_break_lab.simulate import BreakParams, simulate_break
+from pool_match_lab.simulate import BreakParams, simulate_break
 
 # Rangos del barrido de parámetros
 V0_RANGE = (3.0, 10.0)
