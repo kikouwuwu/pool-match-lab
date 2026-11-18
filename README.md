@@ -1,47 +1,62 @@
 # pool-match-lab
 
-Pipeline de datos que simula millones de quiebres de pool (bola 9) con física
-realista para responder una pregunta simple: **¿cuál es el mejor quiebre?**
+Analista de partidas de pool: a partir del **video de una partida** detecta cada
+tiro y genera estadísticas (bolas embocadas, faltas, velocidad y recorrido de la
+blanca) para entender cómo juegas y cómo evolucionas.
 
-> 🚧 Proyecto en construcción. Hoy están listas la generación de datos, el modelado y la orquestación.
+> 🚧 Proyecto en construcción. Hoy funciona el análisis tiro a tiro, validado
+> con partidas simuladas. Falta probarlo con grabaciones reales.
 
-## Preguntas
-
-- ¿Qué combinación de velocidad, ángulo y efecto maximiza las bolas embocadas
-  sin meter la blanca?
-- ¿Qué tan tolerante al error es cada quiebre? Si fallas el ángulo por 1°, ¿qué pasa?
-- ¿Con qué frecuencia entra la 9 en el quiebre, y bajo qué condiciones?
-
-## Arquitectura
+## Cómo funciona
 
 ```
-experiments.yml  →  una partición por experimento
-   │
+Video de la partida (cámara fija sobre la mesa)
+   │  calibración: 4 esquinas del paño → vista cenital en metros
    ▼
-pooltool (simulación física)
-   │  barrido de parámetros en paralelo, semillas fijas
+Detección por cuadro (OpenCV)
+   │  bolas = lo que no es paño · blanca = mancha clara del tamaño de una bola
    ▼
-data/raw/experiment=<nombre>/part-*.parquet   + manifest.json
-   │
+Segmentación en tiros
+   │  un tiro = tramo con bolas en movimiento entre dos momentos de reposo
    ▼
-DuckDB + dbt (tests de calidad en cada capa)
-   │  stg_breaks → fct_breaks → agg_break_grid
-   ▼
-data/warehouse.duckdb
-   │
-   ▼
-Dashboard con los hallazgos                              [próximo]
+Una fila por tiro (Parquet) → DuckDB + dbt → análisis
 ```
 
-| Modelo | Qué contiene |
+Cada tiro registra:
+
+| Campo | Qué es |
 |---|---|
-| `stg_breaks` | Un quiebre por fila, con columnas normalizadas |
-| `fct_breaks` | Resultado según las reglas de bola 9 (falta, gana con la 9, sigue jugando, no emboca) y su celda en la grilla de parámetros |
-| `agg_break_grid` | Tasas de éxito, falta y bola 9 por combinación de velocidad × ángulo |
+| `is_break` | Si el tiro partió desde un rack armado |
+| `n_pocketed` | Bolas de color embocadas (mesa antes vs. después del tiro) |
+| `scratch` | Si la blanca terminó embocada |
+| `cue_speed_ms` | Velocidad inicial de la blanca (m/s) |
+| `cue_travel_m` | Distancia que recorrió la blanca |
+| `cue_start_*`, `cue_end_*` | Dónde estaba y dónde quedó la blanca: base para analizar el control de posición |
 
-Todo corre orquestado en **Dagster**: la simulación es un asset particionado por
-experimento, los modelos dbt se recalculan solos cuando llega un experimento
-nuevo y sus tests aparecen como checks de calidad.
+## Validación con partidas simuladas
+
+Antes de grabar partidas reales, el analizador se prueba con **partidas
+simuladas**: se juegan con un motor de física de billar
+([pooltool](https://github.com/ekiefl/pooltool)) y se dibujan como video con
+ruido y compresión, así que se sabe exactamente qué pasó en cada tiro.
+
+En 6 partidas de 8 tiros (48 tiros):
+
+| Métrica | Resultado |
+|---|---|
+| Tiros detectados correctamente | 48 / 48 |
+| Bolas embocadas correctas | 46 / 48 (96%) |
+| Faltas correctas | 47 / 48 (98%) |
+
+**Limitaciones conocidas:**
+
+- El video simulado es más limpio que uno real: no hay jugador ni taco
+  tapando la mesa, ni reflejos o sombras.
+- Una bola de color parecido al paño (la 6, verde) o detenida junto a una
+  tronera a veces no se cuenta.
+- En el rack las bolas se tocan y no se pueden contar una a una, así que un
+  quiebre asume las 9 bolas de la bola 9.
+- Todavía no identifica el número de cada bola.
 
 Las decisiones de diseño están en [`docs/decisions/`](docs/decisions/).
 
@@ -53,26 +68,34 @@ Requiere Python 3.12.
 python3.12 -m venv .venv && source .venv/bin/activate
 make install
 
-make simulate EXPERIMENT=piloto N=2000   # genera los quiebres
-make transform                          # dbt build: modelos + tests de calidad
-make check                              # lint + tests de Python + dbt build
-
-make orchestrate                        # interfaz de Dagster en http://localhost:3000
+make demo SEED=2     # simula una partida, genera el video y lo analiza
+make check           # lint + tests + dbt build
 ```
 
-Para agregar un experimento, se suma una entrada en `experiments.yml` y se
-materializa su partición desde Dagster.
+Para un video propio, se miden una vez las esquinas del paño en píxeles
+(superior izquierda, superior derecha, inferior derecha, inferior izquierda):
 
-La simulación es **reanudable**: si se interrumpe, al volver a correrla solo
-genera los bloques que faltan. Cada experimento guarda su semilla y la versión
-de pooltool en `manifest.json`, y no se puede reanudar con una configuración
-distinta, así que no se mezclan datos de corridas diferentes.
+```bash
+pool-analyze mi_partida.mp4 --corners "120,80;1800,85;1795,940;118,935"
+```
+
+También se pueden guardar en `mi_partida.json` (`{"corners": "..."}`) junto al
+video, para no repetirlas.
+
+## Laboratorio de quiebres
+
+El proyecto partió simulando quiebres masivamente, y esa parte sigue disponible:
+una simulación reanudable y particionada por experimento (`experiments.yml`),
+modelada con dbt sobre DuckDB y orquestada con Dagster (`make orchestrate`).
+Más adelante servirá para comparar un tiro real con lo que predice la física.
 
 ## Hoja de ruta
 
-- [x] Simulación reproducible de un quiebre
-- [x] Generación en paralelo, por bloques y reanudable
-- [x] Modelado con dbt sobre DuckDB y tests de calidad
-- [x] Orquestación con Dagster (experimentos y backfills)
-- [ ] Validación contra estadísticas de quiebres reales
-- [ ] Dashboard con mapas de calor y tolerancia al error
+- [x] Detección de bolas y blanca, con corrección de perspectiva
+- [x] Segmentación en tiros, bolas embocadas y faltas
+- [x] Validación contra partidas simuladas
+- [ ] Probar con grabaciones reales y ajustar la detección
+- [ ] Modelos dbt y orquestación para los tiros (hoy cubren los quiebres)
+- [ ] Ignorar los cuadros donde el jugador tapa la mesa
+- [ ] Identificar el número de cada bola
+- [ ] Dashboard por sesión y evolución en el tiempo
