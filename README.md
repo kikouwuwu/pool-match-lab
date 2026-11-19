@@ -56,13 +56,18 @@ simuladas**: se juegan con un motor de física de billar
 ([pooltool](https://github.com/ekiefl/pooltool)) y se dibujan como video con
 ruido y compresión, así que se sabe exactamente qué pasó en cada tiro.
 
-En 6 partidas de 8 tiros (48 tiros):
+En 10 partidas de 8 tiros (80 tiros):
 
 | Métrica | Resultado |
 |---|---|
-| Tiros detectados correctamente | 48 / 48 |
-| Bolas embocadas correctas | 46 / 48 (96%) |
-| Faltas correctas | 47 / 48 (98%) |
+| Partidas con todos sus tiros bien separados | 10 / 10 |
+| Bolas embocadas correctas | 74 / 80 (92%) |
+| Faltas correctas | 79 / 80 (99%) |
+
+Las cifras varían según el conjunto de partidas: en una primera validación con
+otras 6 partidas, las bolas embocadas acertaron un 96%. El simulador no es
+100% reproducible entre corridas, así que cada comparación entre versiones del
+analizador se hace sobre los mismos videos.
 
 **Limitaciones conocidas:**
 
@@ -73,6 +78,12 @@ En 6 partidas de 8 tiros (48 tiros):
 - En el rack las bolas se tocan y no se pueden contar una a una, así que un
   quiebre asume las 9 bolas de la bola 9.
 - Todavía no identifica el número de cada bola.
+
+**Cómo se separan los tiros:** el movimiento se mide contra la mesa de 5
+cuadros atrás, no contra el cuadro anterior; si no, una bola que rueda lento
+parece quieta y un tiro se parte en dos. Además, un tramo cuenta como tiro solo
+si la blanca se desplazó, porque en todo tiro se golpea la blanca. Así no se
+confunde un tiro con la blanca puesta en la mesa tras una falta.
 
 Las decisiones de diseño están en [`docs/decisions/`](docs/decisions/).
 

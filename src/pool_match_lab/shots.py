@@ -7,6 +7,7 @@ y si hubo falta.
 
 import argparse
 import json
+from collections import deque
 from itertools import pairwise
 from pathlib import Path
 
@@ -17,11 +18,30 @@ import pyarrow.parquet as pq
 
 from pool_match_lab.vision import BALL_AREA, calibrate, detect
 
-MOTION_PX = 0.3 * BALL_AREA  # píxeles de bola que deben cambiar entre cuadros para contar como movimiento
+MOTION_PX = 0.3 * BALL_AREA  # píxeles de bola que deben cambiar para contar como movimiento
+# El movimiento se mide contra unos cuadros atrás, no contra el anterior: una bola que rueda
+# lento cambia muy pocos píxeles por cuadro y parecería quieta, partiendo un tiro en dos
+MOTION_LAG = 5
+# Tramos más cortos se descartan (p. ej., la blanca reapareciendo tras una falta). Un cambio
+# instantáneo se ve como MOTION_LAG cuadros de movimiento, así que el mínimo debe superarlo
+MIN_SHOT = MOTION_LAG + 5
 MAX_GAP = 10  # cuadros quietos que se toleran dentro de un mismo tiro (bolas casi detenidas)
-MIN_SHOT = 5  # tramos más cortos se descartan (p. ej., la blanca reapareciendo tras una falta)
 REST_WINDOW = 5  # cuadros de reposo que se usan para leer la mesa antes y después
 RACK_BALLS = 9  # bola 9: un quiebre siempre parte con 9 bolas de color
+MIN_CUE_TRAVEL = 0.05  # metros que debe recorrer la blanca para que un tramo cuente como tiro
+
+
+class MotionDetector:
+    """Dice si las bolas se están moviendo, comparando cada máscara con la de MOTION_LAG cuadros atrás."""
+
+    def __init__(self) -> None:
+        self.recent: deque[np.ndarray] = deque(maxlen=MOTION_LAG)
+
+    def update(self, mask: np.ndarray) -> bool:
+        full = len(self.recent) == MOTION_LAG
+        changed = np.count_nonzero(mask != self.recent[0]) if full else 0
+        self.recent.append(mask)
+        return changed > MOTION_PX
 
 
 def segment(moving: list[bool]) -> list[tuple[int, int]]:
@@ -60,20 +80,28 @@ def analyze(video: Path, corners_px: np.ndarray) -> list[dict]:
     capture = cv2.VideoCapture(str(video))
     fps = capture.get(cv2.CAP_PROP_FPS)
 
-    detections, moving, previous = [], [], None
+    detections, moving, motion = [], [], MotionDetector()
     while True:
         ok, frame = capture.read()
         if not ok:
             break
         detection, mask = detect(frame, homography)
-        changed = 0 if previous is None else np.count_nonzero(mask != previous)
-        moving.append(changed > MOTION_PX)
+        moving.append(motion.update(mask))
         detections.append(detection)
-        previous = mask
     capture.release()
 
     rows = []
-    for number, (start, end) in enumerate(segment(moving), start=1):
+    for start, end in segment(moving):
+        # Velocidad inicial de la blanca: su mayor desplazamiento en los primeros cuadros
+        path = [d.cue_xy for d in detections[start - 1 : end] if d.cue_xy is not None]
+        steps = [np.hypot(b[0] - a[0], b[1] - a[1]) for a, b in pairwise(path)]
+        cue_speed = max(steps[:4], default=0.0) * fps
+
+        # En todo tiro se golpea la blanca: si no se movió, fue otra cosa (p. ej., ponerla
+        # en la mesa tras una falta, o artefactos de compresión del video)
+        if sum(steps) < MIN_CUE_TRAVEL:
+            continue
+
         balls_before, cue_before, is_break = _rest_reading(detections, range(start - REST_WINDOW, start))
         balls_after, cue_after, _ = _rest_reading(detections, range(end, end + REST_WINDOW))
         scratch = cue_before and not cue_after
@@ -81,14 +109,9 @@ def analyze(video: Path, corners_px: np.ndarray) -> list[dict]:
         object_before = RACK_BALLS if is_break else balls_before - cue_before
         object_after = balls_after - cue_after
 
-        # Velocidad inicial de la blanca: su mayor desplazamiento en los primeros cuadros
-        path = [d.cue_xy for d in detections[start - 1 : end] if d.cue_xy is not None]
-        steps = [np.hypot(b[0] - a[0], b[1] - a[1]) for a, b in pairwise(path)]
-        cue_speed = max(steps[:4], default=0.0) * fps
-
         rows.append({
             "video": video.stem,
-            "shot": number,
+            "shot": len(rows) + 1,
             "is_break": is_break,
             "start_s": start / fps,
             "duration_s": (end - start) / fps,
