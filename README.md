@@ -24,6 +24,9 @@ data/shots/<sesión>.parquet (una fila por tiro)
    │
    ▼
 DuckDB + dbt: stg_shots → fct_shots → agg_sessions, agg_strength
+   │
+   ▼
+Dashboard (Streamlit)
 ```
 
 Al dejar un video calibrado en `data/videos/`, Dagster lo analiza y recalcula
@@ -86,7 +89,13 @@ make transform       # modelos dbt de tiros + tests de calidad
 make check           # lint + tests + demo + dbt build
 
 make orchestrate     # Dagster en http://localhost:3000, con el sensor de videos activo
+make dashboard       # dashboard en http://localhost:8501
 ```
+
+El dashboard muestra, para las sesiones elegidas: tiros, % de acierto, % de
+faltas y bolas embocadas; la evolución del acierto y las faltas sesión a sesión;
+el acierto según la fuerza del tiro (con el n° de tiros detrás de cada barra) y
+un mapa de la mesa con dónde quedó la blanca después de cada tiro.
 
 Para un video propio, se miden una vez las esquinas del paño en píxeles
 (superior izquierda, superior derecha, inferior derecha, inferior izquierda):
@@ -115,4 +124,4 @@ Más adelante servirá para comparar un tiro real con lo que predice la física.
 - [x] Modelos dbt y orquestación para los tiros
 - [ ] Ignorar los cuadros donde el jugador tapa la mesa
 - [ ] Identificar el número de cada bola
-- [ ] Dashboard por sesión y evolución en el tiempo
+- [x] Dashboard por sesión y evolución en el tiempo

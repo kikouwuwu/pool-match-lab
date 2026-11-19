@@ -4,7 +4,7 @@ DBT_ARGS = --project-dir transform --profiles-dir transform
 EXPERIMENT ?= piloto
 N ?= 2000
 
-.PHONY: install demo simulate transform transform-breaks orchestrate lint test check
+.PHONY: install demo simulate transform transform-breaks orchestrate dashboard lint test check
 
 install:
 	pip install -e ".[dev]"
@@ -28,6 +28,9 @@ transform-breaks:
 
 orchestrate:
 	dagster dev -m pool_match_lab.defs
+
+dashboard:
+	streamlit run dashboard/app.py
 
 lint:
 	ruff check .

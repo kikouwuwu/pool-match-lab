@@ -13,6 +13,8 @@ dependencies = [
     "dagster==1.13.30",
     "dagster-dbt==0.29.30",
     "pyyaml",
+    "streamlit==1.67.0",
+    "plotly==7.1.0",
     # dbt exige protobuf<7; sin este límite pip instala la 7 y dbt falla
     "protobuf<7",
 ]
