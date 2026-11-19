@@ -10,17 +10,30 @@ blanca) para entender cómo juegas y cómo evolucionas.
 ## Cómo funciona
 
 ```
-Video de la partida (cámara fija sobre la mesa)
-   │  calibración: 4 esquinas del paño → vista cenital en metros
+data/videos/<sesión>.mp4 + <sesión>.json (esquinas del paño)
+   │  sensor de Dagster: cada video nuevo es una partición
    ▼
 Detección por cuadro (OpenCV)
+   │  calibración: 4 esquinas → vista cenital en metros
    │  bolas = lo que no es paño · blanca = mancha clara del tamaño de una bola
    ▼
 Segmentación en tiros
    │  un tiro = tramo con bolas en movimiento entre dos momentos de reposo
    ▼
-Una fila por tiro (Parquet) → DuckDB + dbt → análisis
+data/shots/<sesión>.parquet (una fila por tiro)
+   │
+   ▼
+DuckDB + dbt: stg_shots → fct_shots → agg_sessions, agg_strength
 ```
+
+Al dejar un video calibrado en `data/videos/`, Dagster lo analiza y recalcula
+los modelos sin intervención. Los tests de dbt quedan como checks de calidad.
+
+| Modelo | Qué contiene |
+|---|---|
+| `fct_shots` | Cada tiro con su resultado (quiebre, falta, emboca, falla) y su fuerza (suave, media, fuerte) |
+| `agg_sessions` | Por sesión: tiros, bolas embocadas, % de acierto, % de faltas, resultado del quiebre |
+| `agg_strength` | % de acierto y de faltas según la fuerza del tiro: ¿con qué fuerza juegas mejor? |
 
 Cada tiro registra:
 
@@ -69,7 +82,10 @@ python3.12 -m venv .venv && source .venv/bin/activate
 make install
 
 make demo SEED=2     # simula una partida, genera el video y lo analiza
-make check           # lint + tests + dbt build
+make transform       # modelos dbt de tiros + tests de calidad
+make check           # lint + tests + demo + dbt build
+
+make orchestrate     # Dagster en http://localhost:3000, con el sensor de videos activo
 ```
 
 Para un video propio, se miden una vez las esquinas del paño en píxeles
@@ -86,7 +102,8 @@ video, para no repetirlas.
 
 El proyecto partió simulando quiebres masivamente, y esa parte sigue disponible:
 una simulación reanudable y particionada por experimento (`experiments.yml`),
-modelada con dbt sobre DuckDB y orquestada con Dagster (`make orchestrate`).
+modelada con dbt sobre DuckDB (`make simulate` y `make transform-breaks`) y
+orquestada con Dagster.
 Más adelante servirá para comparar un tiro real con lo que predice la física.
 
 ## Hoja de ruta
@@ -95,7 +112,7 @@ Más adelante servirá para comparar un tiro real con lo que predice la física.
 - [x] Segmentación en tiros, bolas embocadas y faltas
 - [x] Validación contra partidas simuladas
 - [ ] Probar con grabaciones reales y ajustar la detección
-- [ ] Modelos dbt y orquestación para los tiros (hoy cubren los quiebres)
+- [x] Modelos dbt y orquestación para los tiros
 - [ ] Ignorar los cuadros donde el jugador tapa la mesa
 - [ ] Identificar el número de cada bola
 - [ ] Dashboard por sesión y evolución en el tiempo

@@ -8,13 +8,25 @@ target-path: "target"
 clean-targets: ["target"]
 
 vars:
-  # Ancho de los rangos para la grilla de resultados
+  # Ancho de los rangos para la grilla de quiebres
   v0_bin_size: 0.5   # m/s
   cut_bin_size: 1.0  # grados
+  # Límites de fuerza del tiro según la velocidad inicial de la blanca (m/s)
+  soft_max_speed: 2.0
+  medium_max_speed: 4.0
 
+# Dos dominios independientes: cada uno lee sus propios archivos y se construye por separado
 models:
   pool_match_lab:
-    staging:
-      +materialized: view
-    marts:
-      +materialized: table
+    quiebres:
+      +tags: ["quiebres"]
+      staging:
+        +materialized: view
+      marts:
+        +materialized: table
+    tiros:
+      +tags: ["tiros"]
+      staging:
+        +materialized: view
+      marts:
+        +materialized: table

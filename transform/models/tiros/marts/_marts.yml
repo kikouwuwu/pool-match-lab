@@ -1,0 +1,33 @@
+version: 2
+
+models:
+  - name: fct_shots
+    description: Tiros con su resultado clasificado y la fuerza del golpe.
+    columns:
+      - name: shot_id
+        data_tests: [unique, not_null]
+      - name: outcome
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['quiebre', 'falta', 'emboca', 'falla']
+      - name: strength
+        description: Suave, media o fuerte según la velocidad inicial de la blanca.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['suave', 'media', 'fuerte']
+
+  - name: agg_sessions
+    description: Una fila por sesión (video) con tasas de acierto y faltas.
+    columns:
+      - name: session
+        data_tests: [unique, not_null]
+      - name: success_rate
+        description: Proporción de tiros (sin contar quiebres) que embocan sin falta.
+
+  - name: agg_strength
+    description: Rendimiento según la fuerza del tiro, para todas las sesiones.
+    columns:
+      - name: strength
+        data_tests: [unique]

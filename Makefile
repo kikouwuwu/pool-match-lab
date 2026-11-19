@@ -4,7 +4,7 @@ DBT_ARGS = --project-dir transform --profiles-dir transform
 EXPERIMENT ?= piloto
 N ?= 2000
 
-.PHONY: install demo simulate transform orchestrate lint test check
+.PHONY: install demo simulate transform transform-breaks orchestrate lint test check
 
 install:
 	pip install -e ".[dev]"
@@ -18,8 +18,13 @@ demo:
 simulate:
 	pool-break --experiment $(EXPERIMENT) --n $(N)
 
+# Modelos de tiros (requiere videos analizados en data/shots)
 transform:
-	$(DBT) build $(DBT_ARGS)
+	$(DBT) build $(DBT_ARGS) --select tag:tiros
+
+# Modelos del laboratorio de quiebres (requiere make simulate)
+transform-breaks:
+	$(DBT) build $(DBT_ARGS) --select tag:quiebres
 
 orchestrate:
 	dagster dev -m pool_match_lab.defs
@@ -30,4 +35,4 @@ lint:
 test:
 	pytest -v
 
-check: lint test transform
+check: lint test demo transform

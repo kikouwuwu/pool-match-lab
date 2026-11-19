@@ -87,6 +87,7 @@ def analyze(video: Path, corners_px: np.ndarray) -> list[dict]:
         cue_speed = max(steps[:4], default=0.0) * fps
 
         rows.append({
+            "video": video.stem,
             "shot": number,
             "is_break": is_break,
             "start_s": start / fps,
@@ -104,6 +105,30 @@ def analyze(video: Path, corners_px: np.ndarray) -> list[dict]:
     return rows
 
 
+def load_corners(video: Path) -> np.ndarray:
+    """Lee las esquinas del paño desde el `<video>.json` que acompaña al video.
+
+    La calibración se mide una vez por posición de cámara y se guarda junto al video.
+    """
+    return parse_corners(json.loads(video.with_suffix(".json").read_text())["corners"])
+
+
+def parse_corners(text: str) -> np.ndarray:
+    return np.float32([[float(v) for v in pair.split(",")] for pair in text.split(";")])
+
+
+def analyze_to_parquet(video: Path, out_dir: Path, corners: np.ndarray | None = None) -> Path:
+    """Analiza un video y guarda sus tiros en `<out_dir>/<video>.parquet`."""
+    rows = analyze(video, load_corners(video) if corners is None else corners)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / f"{video.stem}.parquet"
+    # Escritura atómica: dbt nunca lee un archivo a medio escribir
+    tmp = path.with_suffix(".tmp")
+    pq.write_table(pa.Table.from_pylist(rows), tmp)
+    tmp.rename(path)
+    return path
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("video", type=Path)
@@ -115,16 +140,9 @@ def main() -> None:
     parser.add_argument("--out", type=Path, default=Path("data/shots"))
     args = parser.parse_args()
 
-    corners = args.corners
-    if corners is None:
-        # La calibración se mide una vez por posición de cámara y se guarda junto al video
-        corners = json.loads(args.video.with_suffix(".json").read_text())["corners"]
-    corners = np.float32([[float(v) for v in pair.split(",")] for pair in corners.split(";")])
-    rows = analyze(args.video, corners)
-    args.out.mkdir(parents=True, exist_ok=True)
-    path = args.out / f"{args.video.stem}.parquet"
-    pq.write_table(pa.Table.from_pylist(rows), path)
-    print(f"{path}: {len(rows)} tiros")
+    corners = parse_corners(args.corners) if args.corners else None
+    path = analyze_to_parquet(args.video, args.out, corners)
+    print(f"{path}: {pq.read_metadata(path).num_rows} tiros")
 
 
 if __name__ == "__main__":

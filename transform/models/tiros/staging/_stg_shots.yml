@@ -1,0 +1,16 @@
+version: 2
+
+models:
+  - name: stg_shots
+    description: Un tiro detectado por fila. Cada video es una sesión de juego.
+    columns:
+      - name: shot_id
+        description: Video + número de tiro.
+        data_tests: [unique, not_null]
+      - name: session
+        description: Nombre del video, que identifica la sesión.
+        data_tests: [not_null]
+      - name: n_pocketed
+        data_tests: [not_null]
+      - name: scratch
+        data_tests: [not_null]

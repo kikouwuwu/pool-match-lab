@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: shots
+    description: Tiros detectados por `pool-analyze`, un archivo Parquet por video.
+    tables:
+      - name: raw_shots
+        meta:
+          external_location: "read_parquet('{{ env_var('POOL_SHOTS_DIR', 'data/shots') }}/*.parquet', union_by_name = true)"
