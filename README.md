@@ -56,34 +56,45 @@ simuladas**: se juegan con un motor de física de billar
 ([pooltool](https://github.com/ekiefl/pooltool)) y se dibujan como video con
 ruido y compresión, así que se sabe exactamente qué pasó en cada tiro.
 
-En 10 partidas de 8 tiros (80 tiros):
+En 20 partidas de 8 tiros (160 tiros):
 
 | Métrica | Resultado |
 |---|---|
-| Partidas con todos sus tiros bien separados | 10 / 10 |
-| Bolas embocadas correctas | 74 / 80 (92%) |
-| Faltas correctas | 79 / 80 (99%) |
+| Partidas con todos sus tiros bien separados | 20 / 20 |
+| Bolas embocadas correctas | 160 / 160 |
+| Faltas correctas | 160 / 160 |
 
-Las cifras varían según el conjunto de partidas: en una primera validación con
-otras 6 partidas, las bolas embocadas acertaron un 96%. El simulador no es
-100% reproducible entre corridas, así que cada comparación entre versiones del
-analizador se hace sobre los mismos videos.
+Un resultado perfecto en video simulado **no** significa que el analizador
+sea perfecto: significa que el video simulado es fácil. Es el punto de
+partida para probar con grabaciones reales, no la meta.
+
+Cómo se llegó aquí: la simulación guarda dónde quedó cada bola después de cada
+tiro, así que cada error se puede rastrear hasta la bola exacta que no se vio.
+Así se encontró, por ejemplo, que las bolas detenidas junto a una tronera no se
+contaban porque la zona excluida alrededor de las troneras era más grande que
+la tronera real. El simulador no es 100% reproducible entre corridas, así que
+cada comparación entre versiones del analizador se hace sobre los mismos videos.
 
 **Limitaciones conocidas:**
 
 - El video simulado es más limpio que uno real: no hay jugador ni taco
   tapando la mesa, ni reflejos o sombras.
-- Una bola de color parecido al paño (la 6, verde) o detenida junto a una
-  tronera a veces no se cuenta.
+- La geometría de las troneras es la de una mesa estándar de 9 pies. Otra
+  mesa necesitará ajustarla.
 - En el rack las bolas se tocan y no se pueden contar una a una, así que un
   quiebre asume las 9 bolas de la bola 9.
 - Todavía no identifica el número de cada bola.
 
-**Cómo se separan los tiros:** el movimiento se mide contra la mesa de 5
-cuadros atrás, no contra el cuadro anterior; si no, una bola que rueda lento
-parece quieta y un tiro se parte en dos. Además, un tramo cuenta como tiro solo
-si la blanca se desplazó, porque en todo tiro se golpea la blanca. Así no se
-confunde un tiro con la blanca puesta en la mesa tras una falta.
+**Cómo se separan los tiros:**
+
+- El movimiento se mide contra la mesa de 5 cuadros atrás, no contra el cuadro
+  anterior: si no, una bola que rueda lento parece quieta y el tiro se parte en dos.
+- Se ignoran los píxeles sueltos que cambian entre cuadros: con la mesa quieta,
+  el borde de las bolas titila por ruido y compresión, mientras que una bola que
+  se mueve cambia una franja compacta.
+- Un tramo cuenta como tiro solo si la blanca se desplazó, porque en todo tiro se
+  golpea la blanca. Así no se confunde un tiro con la blanca puesta en la mesa
+  tras una falta.
 
 Las decisiones de diseño están en [`docs/decisions/`](docs/decisions/).
 

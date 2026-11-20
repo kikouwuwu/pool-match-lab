@@ -10,6 +10,18 @@ TABLE_LENGTH = 1.9812
 TABLE_WIDTH = 0.9906
 BALL_RADIUS = 0.028575
 POCKET_RADIUS = 0.062
+# Centro y radio de cada tronera (x a lo largo, y a lo ancho). Los centros quedan fuera del
+# paño: 2,9 cm en diagonal en las esquinas y 6,8 cm hacia afuera en las laterales
+_CORNER, _SIDE, _SIDE_RADIUS = 0.029, 0.068, 0.0645
+POCKETS_M = [
+    (-_CORNER, -_CORNER, POCKET_RADIUS),
+    (TABLE_LENGTH + _CORNER, -_CORNER, POCKET_RADIUS),
+    (-_CORNER, TABLE_WIDTH + _CORNER, POCKET_RADIUS),
+    (TABLE_LENGTH + _CORNER, TABLE_WIDTH + _CORNER, POCKET_RADIUS),
+    (TABLE_LENGTH / 2, -_SIDE, _SIDE_RADIUS),
+    (TABLE_LENGTH / 2, TABLE_WIDTH + _SIDE, _SIDE_RADIUS),
+]
+POCKET_MARGIN = 0.005  # el borde de la tronera se ve difuso en el video
 
 PX_PER_M = 300  # resolución de la vista cenital normalizada
 COLOR_THRESHOLD = 14  # distancia de color (Lab) al paño para considerar que un píxel es bola
@@ -36,13 +48,15 @@ def calibrate(corners_px: np.ndarray) -> np.ndarray:
 
 
 def _pocket_mask() -> np.ndarray:
-    """Zonas de las troneras: ahí no se buscan bolas (una tronera oscura parece una bola)."""
+    """Zonas de las troneras: ahí no se buscan bolas (una tronera oscura parece una bola).
+
+    Debe calzar con la tronera real: si es más grande, tapa bolas detenidas junto a ella.
+    """
     w, h = int(TABLE_LENGTH * PX_PER_M), int(TABLE_WIDTH * PX_PER_M)
     mask = np.zeros((h, w), np.uint8)
-    radius = int((POCKET_RADIUS + BALL_RADIUS * 0.5) * PX_PER_M)
-    for x in (0, w // 2, w):
-        for y in (0, h):
-            cv2.circle(mask, (x, y), radius, 255, -1)
+    for x, y, radius in POCKETS_M:
+        center = (round(x * PX_PER_M), round(y * PX_PER_M))
+        cv2.circle(mask, center, round((radius + POCKET_MARGIN) * PX_PER_M), 255, -1)
     return mask
 
 
@@ -60,8 +74,16 @@ def _count_balls(mask: np.ndarray) -> int:
     dist = cv2.distanceTransform(mask, cv2.DIST_L2, 5)
     window = np.ones((int(radius_px), int(radius_px)), np.uint8)
     peaks = (dist >= cv2.dilate(dist, window)) & (dist > 0.6 * radius_px)
-    n_peaks, _ = cv2.connectedComponents(peaks.astype(np.uint8))
-    return n_peaks - 1
+    n_peaks, _, _, centers = cv2.connectedComponentsWithStats(peaks.astype(np.uint8))
+
+    # Una bola tapada en parte (por una tronera o algo encima) puede dar dos centros muy
+    # juntos. Dos bolas distintas están al menos a 2 radios, así que se fusiona lo que
+    # esté a menos de 1 radio
+    kept: list[np.ndarray] = []
+    for center in centers[1:n_peaks]:
+        if all(np.hypot(*(center - other)) >= radius_px for other in kept):
+            kept.append(center)
+    return len(kept)
 
 
 def detect(frame: np.ndarray, homography: np.ndarray) -> tuple[FrameDetection, np.ndarray]:

@@ -5,7 +5,7 @@ se devuelve lo que realmente pasó en cada tiro.
 """
 
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import cv2
 import numpy as np
@@ -39,6 +39,9 @@ class ShotTruth:
     v0: float
     n_pocketed: int
     scratch: bool
+    # Bolas en la mesa al terminar el tiro, en metros y con los mismos ejes que `vision`
+    # (largo de la mesa en horizontal): sirve para diagnosticar qué bolas no se detectan
+    balls_after: dict[str, tuple[float, float]] = field(default_factory=dict)
 
 
 def table_corners_px(table: pt.Table) -> np.ndarray:
@@ -137,7 +140,12 @@ def simulate_game(n_shots: int, seed: int, video_path: str) -> tuple[list[ShotTr
             writer.write(_draw(table, positions, rng))
 
         pocketed = before - set(_on_table(system))
-        truths.append(ShotTruth(v0=v0, n_pocketed=len(pocketed - {"cue"}), scratch="cue" in pocketed))
+        truths.append(ShotTruth(
+            v0=v0,
+            n_pocketed=len(pocketed - {"cue"}),
+            scratch="cue" in pocketed,
+            balls_after={b: (float(pos[1]), float(pos[0])) for b, pos in _on_table(system).items()},
+        ))
 
         if "cue" in pocketed:
             # Bola en mano: la mesa queda un momento sin blanca y luego vuelve al punto de salida

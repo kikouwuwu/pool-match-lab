@@ -43,6 +43,19 @@ def test_still_ball_is_not_motion():
     assert not any(motion.update(_ball_at(100)) for _ in range(30))
 
 
+def test_flickering_ball_edges_are_not_motion():
+    # Con la mesa quieta, el borde de las bolas titila píxel a píxel por ruido y compresión
+    rng = np.random.default_rng(0)
+    motion = MotionDetector()
+    flags = []
+    for _ in range(30):
+        mask = _ball_at(100)
+        ys, xs = rng.integers(0, 200, 120), rng.integers(0, 400, 120)
+        mask[ys, xs] = 255 - mask[ys, xs]
+        flags.append(motion.update(mask))
+    assert not any(flags)
+
+
 def test_ball_appearing_is_not_a_shot():
     # Tras una falta la blanca reaparece de golpe: no debe contarse como tiro
     motion = MotionDetector()

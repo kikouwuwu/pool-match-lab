@@ -10,7 +10,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from pool_match_lab.vision import BALL_RADIUS, POCKET_RADIUS, TABLE_LENGTH, TABLE_WIDTH
+from pool_match_lab.vision import BALL_RADIUS, POCKETS_M, TABLE_LENGTH, TABLE_WIDTH
 
 WAREHOUSE = os.environ.get("POOL_WAREHOUSE", "data/warehouse.duckdb")
 
@@ -124,11 +124,9 @@ left.plotly_chart(base_layout(fig, "Acierto según la fuerza del tiro", 380), us
 fig = go.Figure()
 fig.add_shape(type="rect", x0=0, y0=0, x1=TABLE_LENGTH, y1=TABLE_WIDTH,
               fillcolor=CLOTH, line={"color": RAIL, "width": 6}, layer="below")
-for x in (0, TABLE_LENGTH / 2, TABLE_LENGTH):
-    for y in (0, TABLE_WIDTH):
-        fig.add_shape(type="circle", x0=x - POCKET_RADIUS, y0=y - POCKET_RADIUS,
-                      x1=x + POCKET_RADIUS, y1=y + POCKET_RADIUS,
-                      fillcolor=RAIL, line_width=0, layer="below")
+for x, y, radius in POCKETS_M:
+    fig.add_shape(type="circle", x0=x - radius, y0=y - radius, x1=x + radius, y1=y + radius,
+                  fillcolor=RAIL, line_width=0, layer="below")
 ended = regular.dropna(subset=["cue_end_x"])
 for outcome, color in OUTCOME_COLORS.items():
     subset = ended[ended["outcome"] == outcome]

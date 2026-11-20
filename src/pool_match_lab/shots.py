@@ -22,6 +22,7 @@ MOTION_PX = 0.3 * BALL_AREA  # píxeles de bola que deben cambiar para contar co
 # El movimiento se mide contra unos cuadros atrás, no contra el anterior: una bola que rueda
 # lento cambia muy pocos píxeles por cuadro y parecería quieta, partiendo un tiro en dos
 MOTION_LAG = 5
+NOISE_KERNEL = np.ones((2, 2), np.uint8)
 # Tramos más cortos se descartan (p. ej., la blanca reapareciendo tras una falta). Un cambio
 # instantáneo se ve como MOTION_LAG cuadros de movimiento, así que el mínimo debe superarlo
 MIN_SHOT = MOTION_LAG + 5
@@ -38,8 +39,13 @@ class MotionDetector:
         self.recent: deque[np.ndarray] = deque(maxlen=MOTION_LAG)
 
     def update(self, mask: np.ndarray) -> bool:
-        full = len(self.recent) == MOTION_LAG
-        changed = np.count_nonzero(mask != self.recent[0]) if full else 0
+        changed = 0
+        if len(self.recent) == MOTION_LAG:
+            diff = (mask != self.recent[0]).astype(np.uint8)
+            # El borde de las bolas titila con el ruido y la compresión: son píxeles sueltos.
+            # Una bola que se mueve, aunque sea lento, cambia una franja compacta
+            diff = cv2.morphologyEx(diff, cv2.MORPH_OPEN, NOISE_KERNEL)
+            changed = np.count_nonzero(diff)
         self.recent.append(mask)
         return changed > MOTION_PX
 
