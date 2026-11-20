@@ -19,6 +19,7 @@ OUTCOME_COLORS = {"emboca": "#2a78d6", "falla": "#eb6834"}
 SERIES = "#2a78d6"  # una sola serie: no necesita leyenda
 CLOTH, RAIL = "#e7efe6", "#8a8578"
 STRENGTH_ORDER = ["suave", "media", "fuerte"]
+TABLE_PAD = 0.14  # metros alrededor del paño: las troneras laterales sobresalen ~13 cm
 
 st.set_page_config(page_title="Pool Match Lab", page_icon="🎱", layout="wide")
 
@@ -141,8 +142,8 @@ for outcome, color in OUTCOME_COLORS.items():
         "velocidad %{customdata[2]:.1f} m/s<extra>" + outcome + "</extra>",
     ))
 # Rangos fijos con la proporción real de la mesa; sin esto el gráfico se autoescala mal
-fig.update_xaxes(range=[-0.08, TABLE_LENGTH + 0.08], autorange=False, visible=False, constrain="domain")
-fig.update_yaxes(range=[TABLE_WIDTH + 0.08, -0.08], autorange=False, visible=False,
+fig.update_xaxes(range=[-TABLE_PAD, TABLE_LENGTH + TABLE_PAD], autorange=False, visible=False, constrain="domain")
+fig.update_yaxes(range=[TABLE_WIDTH + TABLE_PAD, -TABLE_PAD], autorange=False, visible=False,
                  scaleanchor="x", constrain="domain")
 fig.update_layout(legend={"orientation": "h", "y": 1.02, "x": 0, "title_text": "Resultado del tiro: "})
 right.plotly_chart(base_layout(fig, "Dónde quedó la blanca", 380), use_container_width=True)
